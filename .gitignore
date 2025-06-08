@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment folders
+.venv/
+venv/
+env/
+Lib/
+Scripts/
+
+# Environment variables
+.env
+
+# Editor/IDE configs
+.vscode/
+.idea/
+
+# OS-specific garbage
+.DS_Store
+Thumbs.db
+
+# App data you don't want tracked
+user_data.json
+
+# Explicitly ignore the client
+client.py
+
+# Build artifacts (just in case you decide to get fancy)
+dist/
+build/
+*.spec
+
+# Logs (if you decide to log instead of just print-stack-tracing like a goblin)
+*.log
