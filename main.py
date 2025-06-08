@@ -10,20 +10,16 @@ load_dotenv()
 
 app = FastAPI()
 
-# DB Setup
 db = TinyDB("user_data.json")
 users_table = db.table("users")
 User = Query()
 
-# Ensure shared password is in DB
 if not users_table.contains(User.type == "shared_password"):
     users_table.insert({"type": "shared_password", "value": "LED12AA@"})
 
-# GPT client
 gpt_key = os.getenv("gpt_test_key")
 gpt_client = AsyncOpenAI(api_key=gpt_key)
 
-# ElevenLabs client
 eleven_key = os.getenv("eleven_key")
 elevenlabs_client = AsyncElevenLabs(api_key=eleven_key)
 
@@ -133,11 +129,11 @@ async def get_user_token(websocket: WebSocket):
     try:
         await websocket.send_text("Enter your token: ")
         return await websocket.receive_text()
-    except WebSocketDisconnect:
-        print("[WebSocket] Disconnected before sending token")
+    except WebSocketDisconnect as e:
+        print(f"[WebSocket] Client bailed during token step: {e}")
         return None
     except Exception as e:
-        print(f"[Error receiving token]: {e}")
+        print(f"[Token error]: {e}")
         return None
 
 @app.websocket("/user_text")
