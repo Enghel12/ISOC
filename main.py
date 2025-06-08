@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import uuid
 from tinydb import TinyDB, Query
 from elevenlabs.client import AsyncElevenLabs
+import asyncio
 
 load_dotenv()
 
@@ -89,22 +90,31 @@ async def user_to_gpt(websocket: WebSocket, user_id: str):
     use_voice = False
     user_acknowledged_audio = False
     initial_greet = "Alright, can you hear me? Is this thing working?"
+    message_queue = asyncio.Queue()
+
+    async def read_messages():
+        try:
+            while True:
+                data = await websocket.receive_text()
+                await message_queue.put(data)
+        except WebSocketDisconnect:
+            print(f"[WebSocket] Disconnected during chat loop (user_id={user_id})")
+        except Exception as e:
+            print(f"[Read error]: {e}")
+
+    read_task = asyncio.create_task(read_messages())
 
     try:
         await websocket.send_text("Oh, someone is here... I will wait for them to say something 🤖")
         while True:
-            try:
-                user_prompt = await websocket.receive_text()
-            except WebSocketDisconnect:
-                print(f"[WebSocket] Disconnected during chat loop (user_id={user_id})")
-                break
+            user_prompt = await message_queue.get()
 
             if user_prompt == "USE_VOICE" and not use_voice:
                 use_voice = True
                 await gpt_to_elevenlabs(initial_greet, websocket)
                 continue
 
-            if any(phrase in user_prompt.lower() for phrase in ["i can hear you", "i hear you", "i'm hearing you", "yes i can hear", "i can hear the ai"]):
+            if any(phrase in user_prompt.lower() for phrase in ["i can hear", "i hear", "yes i can hear"]):
                 user_acknowledged_audio = True
 
             gpt_response = await send_to_gpt(user_prompt, user_id, use_voice, user_acknowledged_audio)
@@ -116,6 +126,8 @@ async def user_to_gpt(websocket: WebSocket, user_id: str):
 
     except Exception as e:
         print(f"[Fatal error in user_to_gpt]: {e}")
+    finally:
+        read_task.cancel()
 
 async def create_and_store_id(token: str):
     new_id = str(uuid.uuid4())
